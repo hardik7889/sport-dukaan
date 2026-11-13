@@ -1,3 +1,5 @@
 _t_*.html
 _dom/
 *.log
+_*.png
+_*.js

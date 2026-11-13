@@ -28,9 +28,28 @@ Panel mein apna WhatsApp number set kar lo (wahi number order alerts aur "WhatsA
 | File | Kaam |
 |---|---|
 | `index.html` | poora app — router, cart, checkout, orders, owner panel |
-| `product-art.js` | har product ki inline SVG art |
+| `product-photos.js` | har product ki **real photo** (CC-licensed) + LQIP + credits |
+| `product-art.js` | photo na mile to dikhne wala SVG art fallback |
 | `holo.js` | Three.js hero scene, 3D headline, card tilt |
 | `notify.js` | naya-order alert (chime + desktop notification) |
+
+## Real photos
+
+`img/*.webp` — 30 product photos, sab CC-licensed (Openverse / Wikimedia Commons se).
+Har photo ke saath creator + license `product-photos.js` mein hai, aur footer mein
+attribution line bhi dikhti hai.
+
+Naye/aur photos dhoondhne ke liye:
+
+```bash
+python tools/fetch_photos.py            # Openverse se sab (threaded)
+python tools/fetch_commons.py           # missing ko Commons se
+python tools/fetch_recheck.py           # strict quality gate ke saath dobara
+python tools/fetch_curated.py           # exact Commons filename se
+```
+
+Pipeline: search → title filter → download → brightness/sharpness gate →
+auto-level + crop + vignette → WebP + LQIP base64 → `product-photos.js`.
 
 ## Data
 

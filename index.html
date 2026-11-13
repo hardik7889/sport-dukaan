@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="product-art.js"></script>
+<script src="product-photos.js"></script>
 <script src="holo.js"></script>
 <script src="notify.js"></script>
 <style>
@@ -114,6 +115,26 @@ h1,h2,h3{margin:0;font-family:var(--font-d);letter-spacing:.03em}
 @keyframes holoPulse{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.09)}}
 .art-block svg{position:relative;z-index:1;width:88%;height:88%;filter:drop-shadow(0 10px 20px rgba(0,0,0,.55));transition:transform .34s}
 .card:hover .art-block svg{transform:scale(1.08) translateY(-3px)}
+
+/* ---------- real photo cards (3D) ---------- */
+.art-block.has-photo{perspective:720px;
+  background:radial-gradient(circle at 50% 54%,rgba(94,231,255,.22),rgba(255,255,255,.04) 55%,transparent 74%)}
+.photo-float{position:relative;z-index:1;width:88%;height:88%;border-radius:14px;overflow:hidden;
+  background-size:cover;background-position:center;transform-style:preserve-3d;transform-origin:50% 62%;
+  filter:drop-shadow(0 12px 22px rgba(0,0,0,.62)) saturate(1.06);
+  transition:transform .5s cubic-bezier(.2,.8,.2,1),filter .4s;
+  animation:dishFloat 7s ease-in-out infinite}
+.dish-photo{width:100%;height:100%;object-fit:cover;display:block;border-radius:14px}
+.photo-float::after{content:'';position:absolute;inset:0;border-radius:14px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(94,231,255,.10),transparent 32%,transparent 72%,rgba(255,95,162,.09));
+  box-shadow:inset 0 0 0 1px rgba(94,231,255,.16),inset 0 -16px 26px -18px rgba(0,0,0,.55)}
+@keyframes dishFloat{0%,100%{transform:translateY(0) rotateX(0) scale(1.02)}50%{transform:translateY(-4px) rotateX(2.4deg) scale(1.045)}}
+.card:hover .photo-float{animation-play-state:paused;transform:translateY(-5px) rotateX(4.5deg) scale(1.05)}
+.art-fallback{width:88%;height:88%;display:flex;align-items:center;justify-content:center}
+.photo-credit{position:absolute;bottom:8px;right:10px;z-index:3;font-size:10px;line-height:1;
+  color:rgba(232,238,252,.65);background:rgba(5,8,16,.55);padding:4px 7px;border-radius:7px;
+  max-width:62%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cart-line .thumb img{width:100%;height:100%;object-fit:cover;border-radius:12px;display:block}
 .art-tag{position:absolute;top:10px;left:10px;z-index:2;padding:4px 9px;border-radius:8px;font-size:11px;
   font-weight:800;letter-spacing:.08em;font-family:var(--font-d)}
 .tag-bestseller{background:rgba(255,176,32,.9);color:#3a2400}
@@ -370,6 +391,7 @@ footer{margin-top:60px;border-top:1px solid var(--line);background:rgba(255,255,
     </div>
   </div>
   <div class="copy">© <span id="yr"></span> Sport Dukaan — banaya gaya pyaar se. Prices ₹ mein hain.</div>
+  <div id="photo-credits" style="max-width:1200px;margin:0 auto;padding:0 20px 18px;color:var(--mut);font-size:12px;line-height:1.7"></div>
 </footer>
 
 <div id="modal-root"></div>
@@ -469,6 +491,48 @@ footer{margin-top:60px;border-top:1px solid var(--line);background:rgba(255,255,
     return f ? '<svg viewBox="0 0 220 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' + f() + '</svg>' : '';
   }
   function tagClass(t) { return TAG_CLASS[t] || 'tag-new'; }
+
+  /* real photo mila to use lo, warna SVG art fallback */
+  function photoFor(id) {
+    var ph = (typeof PRODUCT_PHOTOS !== 'undefined') && PRODUCT_PHOTOS[id];
+    return ph || null;
+  }
+  function prodArtBlock(p) {
+    var tag = p.tag ? '<span class="art-tag ' + tagClass(p.tag) + '">' + p.tag + '</span>' : '';
+    var ph = photoFor(p.id);
+    if (!ph) {
+      return '<div class="art-block"><div class="art-glow"></div>' + artFor(p.id) + tag + '</div>';
+    }
+    return '<div class="art-block has-photo" id="art-' + p.id + '">' +
+      '<div class="art-glow"></div>' +
+      '<div class="photo-float" style="background-image:url(' + ph.lqip + ')">' +
+        '<img class="dish-photo" src="' + ph.src + '" alt="' + esc(p.name) + '"' +
+          ' title="📷 ' + esc(ph.creator) + ' — ' + esc(String(ph.license).toUpperCase()) + '"' +
+          ' loading="lazy" decoding="async" onerror="photoFailed(this,\'' + p.id + '\')">' +
+      '</div>' +
+      tag +
+      '<span class="photo-credit" title="' + esc(ph.creator + ' — ' + String(ph.license).toUpperCase()) + '">📷 ' + esc(ph.creator) + '</span>' +
+    '</div>';
+  }
+  function photoFailed(img, id) {
+    var host = img.parentNode;
+    if (!host) { img.style.display = 'none'; return; }
+    var d = document.createElement('div');
+    d.className = 'art-fallback';
+    d.innerHTML = artFor(id);
+    host.replaceWith(d);
+  }
+  function photoThumbErr(img, id) {
+    img.outerHTML = artFor(id);
+  }
+  function thumbFor(id, name) {
+    var ph = photoFor(id);
+    if (ph) {
+      return '<img src="' + ph.src + '" alt="' + esc(name) + '" loading="lazy" decoding="async"' +
+             ' onerror="photoThumbErr(this,\'' + id + '\')">';
+    }
+    return artFor(id);
+  }
 
   function loadCart() {
     try { return JSON.parse(localStorage.getItem(LS_CART) || '[]'); } catch (e) { return []; }
@@ -928,9 +992,7 @@ footer{margin-top:60px;border-top:1px solid var(--line);background:rgba(255,255,
     var off = Math.round((1 - p.price / p.mrp) * 100);
     return '<div class="card prod tilt picked-host" id="card-' + p.id + '">' +
       '<button class="pick" onclick="togglePick(\'' + p.id + '\')" aria-label="Select">✓</button>' +
-      '<div class="art-block"><div class="art-glow"></div>' + artFor(p.id) +
-        (p.tag ? '<span class="art-tag ' + tagClass(p.tag) + '">' + p.tag + '</span>' : '') +
-      '</div>' +
+      prodArtBlock(p) +
       '<div class="card-body">' +
         '<div class="prod-cat">' + p.cat + '</div>' +
         '<div class="prod-name">' + esc(p.name) + '</div>' +
@@ -1026,7 +1088,7 @@ footer{margin-top:60px;border-top:1px solid var(--line);background:rgba(255,255,
     } else {
       body = cart.map(function (i) {
         return '<div class="cart-line">' +
-          '<div class="thumb">' + artFor(i.id) + '</div>' +
+          '<div class="thumb">' + thumbFor(i.id, i.name) + '</div>' +
           '<div class="info"><b>' + esc(i.name) + '</b><span>' + esc(i.cat) + ' • ' + fmt(i.price) + '</span></div>' +
           '<div class="qty">' +
             '<button onclick="setQty(\'' + i.id + '\',' + (i.qty - 1) + ')" aria-label="Minus">−</button>' +
@@ -1262,11 +1324,28 @@ footer{margin-top:60px;border-top:1px solid var(--line);background:rgba(255,255,
   window.saveWaNumber = saveWaNumber;
   window.toggleNotify = toggleNotify;
   window.route = route;
+  window.photoFailed = photoFailed;
+  window.photoThumbErr = photoThumbErr;
 
   window.addEventListener('hashchange', route);
 
   /* ---------- boot ---------- */
   document.getElementById('yr').textContent = new Date().getFullYear();
+  var pc = document.getElementById('photo-credits');
+  if (pc && typeof PRODUCT_PHOTOS !== 'undefined' && Object.keys(PRODUCT_PHOTOS).length) {
+    var seen = {};
+    Object.keys(PRODUCT_PHOTOS).forEach(function (k) {
+      var p = PRODUCT_PHOTOS[k];
+      var key = (p.creator || '') + '|' + (p.license || '');
+      if (!seen[key]) seen[key] = { creator: p.creator, license: p.license, count: 0 };
+      seen[key].count++;
+    });
+    pc.innerHTML = '<b style="color:var(--acc)">📷 Photo credits</b> — product photos CC-licensed via Openverse. ' +
+      Object.keys(seen).map(function (k) {
+        var s = seen[k];
+        return esc(s.creator) + ' (' + esc(String(s.license).toUpperCase()) + ')';
+      }).join(' · ');
+  }
   var fw = document.getElementById('foot-wa');
   if (fw) {
     fw.href = 'https://wa.me/' + waNumber() + '?text=' + encodeURIComponent('Bhai, main Sport Dukaan se order karna chahta hoon.');
